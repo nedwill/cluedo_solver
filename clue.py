@@ -16,16 +16,23 @@ class Card:
     weapon = 1
     room = 2
 
-    def __init__(name, _type):
+    def __init__(self, name, _type):
         assert type in [0, 1, 2]
         self.name = name
         self._type = _type
+
+    def __str__(self):
+        card_types = {self.suspect: "suspect", self.weapon: "weapon", self.room: "room"}
+        return "Card Type: {}, Card Name: {}".format(self.name, card_types[self._type])
+
+    def __repr__(self):
+        return self.__str__()
 
 def get_item(s):
     assert(len(s) == 1)
     return list(s)[0]
 
-#all players must implement witness_personal, witness_other, and do_turn
+#all players must implement witness and do_turn
 
 #random.choice doesn't work on frozen sets...
 def choice(fset):
@@ -36,11 +43,30 @@ class Bot:
         self.suspect_cards = suspect_cards
         self.weapon_cards = weapon_cards
         self.room_cards = room_cards
+        self.known_suspects = set()
+        self.known_weapons = set()
+        self.known_rooms = set()
 
-    #def witness_personal(self, cards_requested, player_responded, card_shown):
-    #    pass
+    #we technically know cards_requested, but we want
+    #to minimize state for now
 
-    def witness_other(self, player_requested, cards_requested, player_responded, card_shown):
+    def witness_personal(self, cards_requested, card):
+        def add_card(card):
+            if card._type = Card.suspect:
+                self.known_suspects.add(card.name)
+            elif card._type = Card.weapon:
+                self.known_weapons.add(card.name)
+            elif card._type = Card.room:
+                self.known_rooms.add(card.name)
+            else:
+                assert False #unreachable
+        if card is None:
+            for _card in cards_requested:
+                add_card(_card)
+        else:
+            add_card(card)
+
+    def witness(self, player_requested, cards_requested, player_responded, card_shown):
         pass
 
     def do_turn(self, game_state):
@@ -73,24 +99,73 @@ class Bot:
         if seen is None:
             pass
 
+class PlayerInfo:
+    def __init__(self, doesnt_have=set(), has=set(), has_conj=[]):
+        self.doesnt_have = set(doesnt_have) #make copy
+        self.has = set(has)
+        self.has_conj = has_conj
+
+    def add_doesnt_have_disj(self, cards):
+        for card in cards:
+            self.doesnt_have.add(card)
+
+    def add_has_disj(self, cards):
+        disj = set(cards)
+        self.has_conj.add(has_conj)
+
+    def add_has(self, card):
+        self.has.add(card)
+
 class Human:
     def __init__(self, suspect_cards, weapon_cards, room_cards):
         self.suspect_cards = suspect_cards
         self.weapon_cards = weapon_cards
         self.room_cards = room_cards
+        self.known_suspects = set()
+        self.known_weapons = set()
+        self.known_rooms = set()
         self.other_player_info = {}
+
+    def witness_personal(self, cards_requested, card):
+        def add_card(card):
+            if card._type = Card.suspect:
+                self.known_suspects.add(card.name)
+            elif card._type = Card.weapon:
+                self.known_weapons.add(card.name)
+            elif card._type = Card.room:
+                self.known_rooms.add(card.name)
+            else:
+                assert False #unreachable
+        if card is None:
+            for _card in cards_requested:
+                add_card(_card)
+        else:
+            add_card(card)
 
     #player that requested, player that responded, whether they showed a card
     def witness(self, player_requested, cards_requested, player_responded, card_shown):
-        pass
+        if card_shown:
 
     def do_turn(self, game_state):
         pass
 
 def partition_set(fset, num_subsets):
-    n = len(fset)
-    num_each = n // num_sub
-
+    assert 0 <= num_subsets <= len(fset)
+    st = set(fset) #make mutable copy
+    num_each = len(fset) // num_sub
+    num_extra = len(fset) % num_sub
+    assert num_extra < num_sub
+    l = []
+    for i in range(num_subsets):
+        num_to_pick = num_each
+        if i < num_extra:
+            num_to_pick += 1
+        picked = sample(st, num_to_pick)
+        st -= picked
+        l.append(picked)
+    assert len(l) == num_subsets
+    assert sum(len(sb) for sb in l) == n
+    return l
 
 class GameState:
     def __init__(self, num_opponents):
@@ -107,7 +182,10 @@ class GameState:
         self.players = [Human()] + [Bot() for _ in range(num_opponents)]
 
     def make_guess(self, suspect_guess, weapon_guess, room_guess):
-        people_to_ask = current_player_i
+        all_peeps = list(range(self.num_players))
+        #everyone in order after the player
+        #player 3 goes in a game of 5 players -> [4, 0, 1, 2]
+        people_to_ask = all_peeps[self.current_player_i:] + all_peeps[:self.current_player_i-1]
 
     def play_game(self):
         current_player_i = 0
